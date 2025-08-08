@@ -15,11 +15,11 @@ class SchulteTableApp:
         self.root.geometry("1000x800")
 
         # Настройки по умолчанию
-        self.rows = 5
-        self.cols = 5
-        self.cell_min_width = 50
-        self.cell_min_height = 50
-        self.logging_enabled = False
+        self.rows = 4
+        self.cols = 4
+        self.cell_min_width = 0
+        self.cell_min_height = 0
+        self.logging_enabled = True
 
         # Цвета
         self.bg_color = "#f0f0f0"
@@ -28,12 +28,20 @@ class SchulteTableApp:
         self.cell_color = "white"
         self.active_cell_color = "lightblue"
         self.target_color = "red"
+        self.timer_color = "red"
+        self.timer_bg_color = "#f0f0f0"
+        self.timer2_color = "red"
+        self.timer2_bg_color = "#f0f0f0"
 
         # Шрифты
         self.font_family = "Arial"
         self.font_size = 40
         self.target_font_family = "Arial"
         self.target_font_size = 40
+        self.timer_font_family = "Arial"
+        self.timer_font_size = 40
+        self.timer2_font_family = "Arial"
+        self.timer2_font_size = 40
 
         # Состояние приложения
         self.current_user = None
@@ -50,27 +58,23 @@ class SchulteTableApp:
         self.correct_hovers = 0
         self.correct_clicks = 0
         self.after_id = None
-        self.timer_after_id = None  # Для таймера
+        self.timer_after_id = None
+        self.timer2_after_id = None
         self.generating_table = False
         self.is_closing = False
 
         # Переменные для режимов игры
-        self.click_refresh_mode_var = tk.BooleanVar(value=True)
-        self.click_no_refresh_mode_var = tk.BooleanVar(value=False)
-        self.hover_mode_var = tk.BooleanVar(value=False)
-        self.simple_mode_var = tk.BooleanVar(value=False)
+        self.game_mode_var = tk.StringVar(value="click_refresh")
 
         # Переменные для управления видимостью элементов
         self.show_new_user = tk.BooleanVar(value=True)
         self.show_user_select = tk.BooleanVar(value=True)
         self.show_rows = tk.BooleanVar(value=True)
         self.show_cols = tk.BooleanVar(value=True)
-        self.show_click_refresh = tk.BooleanVar(value=True)
-        self.show_click_no_refresh = tk.BooleanVar(value=True)
-        self.show_hover_mode = tk.BooleanVar(value=True)
-        self.show_simple_mode = tk.BooleanVar(value=True)
+        self.show_game_modes = tk.BooleanVar(value=True)
         self.show_target = tk.BooleanVar(value=True)
-        self.show_timer = tk.BooleanVar(value=True)  # Для таймера
+        self.show_timer = tk.BooleanVar(value=True)
+        self.show_timer2 = tk.BooleanVar(value=True)
         self.show_reset_table = tk.BooleanVar(value=True)
         self.show_start_stop = tk.BooleanVar(value=True)
 
@@ -96,6 +100,9 @@ class SchulteTableApp:
             if self.timer_after_id:
                 self.root.after_cancel(self.timer_after_id)
                 self.timer_after_id = None
+            if self.timer2_after_id:
+                self.root.after_cancel(self.timer2_after_id)
+                self.timer2_after_id = None
             self.root.unbind("<Configure>")
             self.root.destroy()
         except Exception as e:
@@ -186,24 +193,22 @@ class SchulteTableApp:
             self.cols_spinbox = ttk.Spinbox(self.control_frame, from_=3, to=10, textvariable=self.cols_var, width=5)
             self.cols_spinbox.grid(row=4, column=0, padx=(60, 5), pady=5, sticky="w")
 
-            # Второй столбец: Режимы игры
-            self.click_refresh_check = ttk.Checkbutton(self.control_frame, text="Нажатие с обновлением", variable=self.click_refresh_mode_var,
-                                                      command=self.toggle_game_modes)
-            self.click_refresh_check.grid(row=0, column=1, padx=5, pady=5, sticky="w")
-            self.click_no_refresh_check = ttk.Checkbutton(self.control_frame, text="Нажатие без обновления", variable=self.click_no_refresh_mode_var,
-                                                         command=self.toggle_game_modes)
-            self.click_no_refresh_check.grid(row=1, column=1, padx=5, pady=5, sticky="w")
-            self.hover_mode_check = ttk.Checkbutton(self.control_frame, text="Режим наведения", variable=self.hover_mode_var,
-                                                   command=self.toggle_game_modes)
-            self.hover_mode_check.grid(row=2, column=1, padx=5, pady=5, sticky="w")
-            self.simple_mode_check = ttk.Checkbutton(self.control_frame, text="Простой режим", variable=self.simple_mode_var,
-                                                    command=self.toggle_game_modes)
-            self.simple_mode_check.grid(row=3, column=1, padx=5, pady=5, sticky="w")
+            # Второй столбец: Режимы игры (радио кнопки)
+            self.game_mode_frame = ttk.LabelFrame(self.control_frame, text="Режим игры", padding="5")
+            self.game_mode_frame.grid(row=0, column=1, rowspan=5, padx=5, pady=5, sticky="nsw")
+            ttk.Radiobutton(self.game_mode_frame, text="Нажатие с обновлением", value="click_refresh",
+                            variable=self.game_mode_var, command=self.toggle_game_modes).pack(anchor="w", padx=5, pady=2)
+            ttk.Radiobutton(self.game_mode_frame, text="Нажатие без обновления", value="click_no_refresh",
+                            variable=self.game_mode_var, command=self.toggle_game_modes).pack(anchor="w", padx=5, pady=2)
+            ttk.Radiobutton(self.game_mode_frame, text="Режим наведения", value="hover",
+                            variable=self.game_mode_var, command=self.toggle_game_modes).pack(anchor="w", padx=5, pady=2)
+            ttk.Radiobutton(self.game_mode_frame, text="Простой режим", value="simple",
+                            variable=self.game_mode_var, command=self.toggle_game_modes).pack(anchor="w", padx=5, pady=2)
 
-            # Третий столбец: Таймер и Ищем
-            self.timer_label = ttk.Label(self.control_frame, text="00:00",
-                                         font=(self.target_font_family, self.target_font_size),
-                                         foreground=self.target_color)
+            # Третий столбец: Таймер 1, Ищем, Счетчик, Таймер 2
+            self.timer_label = ttk.Label(self.control_frame, text="0.000",
+                                         font=(self.timer_font_family, self.timer_font_size),
+                                         foreground=self.timer_color, background=self.timer_bg_color)
             self.timer_label.grid(row=1, column=2, padx=5, pady=5, sticky="w")
             self.target_label = ttk.Label(self.control_frame, text="Ищем:")
             self.target_label.grid(row=2, column=2, padx=5, pady=5, sticky="w")
@@ -211,6 +216,10 @@ class SchulteTableApp:
                                             font=(self.target_font_family, self.target_font_size),
                                             foreground=self.target_color)
             self.clicks_counter.grid(row=3, column=2, padx=5, pady=5, sticky="w")
+            self.timer2_label = ttk.Label(self.control_frame, text="0.000",
+                                          font=(self.timer2_font_family, self.timer2_font_size),
+                                          foreground=self.timer2_color, background=self.timer2_bg_color)
+            self.timer2_label.grid(row=4, column=2, padx=5, pady=5, sticky="w")
 
             # Четвертый столбец: Кнопки управления
             self.reset_table_button = ttk.Button(self.control_frame, text="Обновить таблицу", command=self.reset_table)
@@ -309,9 +318,25 @@ class SchulteTableApp:
             self.target_color_label = ttk.Label(color_frame, background=self.target_color, width=3)
             self.target_color_label.grid(row=4, column=1, padx=5, pady=5)
 
-            ttk.Button(color_frame, text="Цвет фона", command=lambda: self.choose_color("bg")).grid(row=5, column=0, padx=5, pady=5, sticky="w")
+            ttk.Button(color_frame, text="Цвет таймера", command=lambda: self.choose_color("timer")).grid(row=5, column=0, padx=5, pady=5, sticky="w")
+            self.timer_color_label = ttk.Label(color_frame, background=self.timer_color, width=3)
+            self.timer_color_label.grid(row=5, column=1, padx=5, pady=5)
+
+            ttk.Button(color_frame, text="Фон таймера", command=lambda: self.choose_color("timer_bg")).grid(row=6, column=0, padx=5, pady=5, sticky="w")
+            self.timer_bg_color_label = ttk.Label(color_frame, background=self.timer_bg_color, width=3)
+            self.timer_bg_color_label.grid(row=6, column=1, padx=5, pady=5)
+
+            ttk.Button(color_frame, text="Цвет таймера 2", command=lambda: self.choose_color("timer2")).grid(row=7, column=0, padx=5, pady=5, sticky="w")
+            self.timer2_color_label = ttk.Label(color_frame, background=self.timer2_color, width=3)
+            self.timer2_color_label.grid(row=7, column=1, padx=5, pady=5)
+
+            ttk.Button(color_frame, text="Фон таймера 2", command=lambda: self.choose_color("timer2_bg")).grid(row=8, column=0, padx=5, pady=5, sticky="w")
+            self.timer2_bg_color_label = ttk.Label(color_frame, background=self.timer2_bg_color, width=3)
+            self.timer2_bg_color_label.grid(row=8, column=1, padx=5, pady=5)
+
+            ttk.Button(color_frame, text="Цвет фона", command=lambda: self.choose_color("bg")).grid(row=9, column=0, padx=5, pady=5, sticky="w")
             self.bg_color_label = ttk.Label(color_frame, background=self.bg_color, width=3)
-            self.bg_color_label.grid(row=5, column=1, padx=5, pady=5)
+            self.bg_color_label.grid(row=9, column=1, padx=5, pady=5)
         except Exception as e:
             self.log_event("error", "create_colors_tab", f"Ошибка при создании вкладки цветов: {str(e)}")
 
@@ -342,6 +367,24 @@ class SchulteTableApp:
             ttk.Label(font_frame, text="Размер искомой цифры:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
             self.target_font_size_var = tk.IntVar(value=self.target_font_size)
             ttk.Spinbox(font_frame, from_=8, to=72, textvariable=self.target_font_size_var, width=5).grid(row=3, column=1, padx=5, pady=5)
+
+            ttk.Label(font_frame, text="Шрифт таймера:").grid(row=4, column=0, padx=5, pady=5, sticky="w")
+            self.timer_font_family_var = tk.StringVar(value=self.timer_font_family)
+            self.timer_font_combobox = ttk.Combobox(font_frame, textvariable=self.timer_font_family_var, values=available_fonts)
+            self.timer_font_combobox.grid(row=4, column=1, padx=5, pady=5, sticky="ew")
+
+            ttk.Label(font_frame, text="Размер таймера:").grid(row=5, column=0, padx=5, pady=5, sticky="w")
+            self.timer_font_size_var = tk.IntVar(value=self.timer_font_size)
+            ttk.Spinbox(font_frame, from_=8, to=72, textvariable=self.timer_font_size_var, width=5).grid(row=5, column=1, padx=5, pady=5)
+
+            ttk.Label(font_frame, text="Шрифт таймера 2:").grid(row=6, column=0, padx=5, pady=5, sticky="w")
+            self.timer2_font_family_var = tk.StringVar(value=self.timer2_font_family)
+            self.timer2_font_combobox = ttk.Combobox(font_frame, textvariable=self.timer2_font_family_var, values=available_fonts)
+            self.timer2_font_combobox.grid(row=6, column=1, padx=5, pady=5, sticky="ew")
+
+            ttk.Label(font_frame, text="Размер таймера 2:").grid(row=7, column=0, padx=5, pady=5, sticky="w")
+            self.timer2_font_size_var = tk.IntVar(value=self.timer2_font_size)
+            ttk.Spinbox(font_frame, from_=8, to=72, textvariable=self.timer2_font_size_var, width=5).grid(row=7, column=1, padx=5, pady=5)
         except Exception as e:
             self.log_event("error", "create_fonts_tab", f"Ошибка при создании вкладки шрифтов: {str(e)}")
 
@@ -377,22 +420,18 @@ class SchulteTableApp:
                             command=self.update_control_visibility).grid(row=2, column=0, padx=5, pady=5, sticky="w")
             ttk.Checkbutton(controls_frame, text="Показать настройку столбцов", variable=self.show_cols,
                             command=self.update_control_visibility).grid(row=3, column=0, padx=5, pady=5, sticky="w")
-            ttk.Checkbutton(controls_frame, text="Показать 'Нажатие с обновлением'", variable=self.show_click_refresh,
+            ttk.Checkbutton(controls_frame, text="Показать режимы игры", variable=self.show_game_modes,
                             command=self.update_control_visibility).grid(row=4, column=0, padx=5, pady=5, sticky="w")
-            ttk.Checkbutton(controls_frame, text="Показать 'Нажатие без обновления'", variable=self.show_click_no_refresh,
-                            command=self.update_control_visibility).grid(row=5, column=0, padx=5, pady=5, sticky="w")
-            ttk.Checkbutton(controls_frame, text="Показать 'Режим наведения'", variable=self.show_hover_mode,
-                            command=self.update_control_visibility).grid(row=6, column=0, padx=5, pady=5, sticky="w")
-            ttk.Checkbutton(controls_frame, text="Показать 'Простой режим'", variable=self.show_simple_mode,
-                            command=self.update_control_visibility).grid(row=7, column=0, padx=5, pady=5, sticky="w")
             ttk.Checkbutton(controls_frame, text="Показать счетчик 'Ищем'", variable=self.show_target,
-                            command=self.update_control_visibility).grid(row=8, column=0, padx=5, pady=5, sticky="w")
+                            command=self.update_control_visibility).grid(row=5, column=0, padx=5, pady=5, sticky="w")
             ttk.Checkbutton(controls_frame, text="Показать таймер", variable=self.show_timer,
-                            command=self.update_control_visibility).grid(row=9, column=0, padx=5, pady=5, sticky="w")
+                            command=self.update_control_visibility).grid(row=6, column=0, padx=5, pady=5, sticky="w")
+            ttk.Checkbutton(controls_frame, text="Показать таймер 2", variable=self.show_timer2,
+                            command=self.update_control_visibility).grid(row=7, column=0, padx=5, pady=5, sticky="w")
             ttk.Checkbutton(controls_frame, text="Показать кнопку 'Обновить таблицу'", variable=self.show_reset_table,
-                            command=self.update_control_visibility).grid(row=10, column=0, padx=5, pady=5, sticky="w")
+                            command=self.update_control_visibility).grid(row=8, column=0, padx=5, pady=5, sticky="w")
             ttk.Checkbutton(controls_frame, text="Показать кнопку 'Старт/Стоп'", variable=self.show_start_stop,
-                            command=self.update_control_visibility).grid(row=11, column=0, padx=5, pady=5, sticky="w")
+                            command=self.update_control_visibility).grid(row=9, column=0, padx=5, pady=5, sticky="w")
         except Exception as e:
             self.log_event("error", "create_controls_tab", f"Ошибка при создании вкладки управления: {str(e)}")
 
@@ -428,25 +467,10 @@ class SchulteTableApp:
                 self.cols_label.grid_remove()
                 self.cols_spinbox.grid_remove()
 
-            if self.show_click_refresh.get():
-                self.click_refresh_check.grid()
+            if self.show_game_modes.get():
+                self.game_mode_frame.grid()
             else:
-                self.click_refresh_check.grid_remove()
-
-            if self.show_click_no_refresh.get():
-                self.click_no_refresh_check.grid()
-            else:
-                self.click_no_refresh_check.grid_remove()
-
-            if self.show_hover_mode.get():
-                self.hover_mode_check.grid()
-            else:
-                self.hover_mode_check.grid_remove()
-
-            if self.show_simple_mode.get():
-                self.simple_mode_check.grid()
-            else:
-                self.simple_mode_check.grid_remove()
+                self.game_mode_frame.grid_remove()
 
             if self.show_target.get():
                 self.target_label.grid()
@@ -459,6 +483,11 @@ class SchulteTableApp:
                 self.timer_label.grid()
             else:
                 self.timer_label.grid_remove()
+
+            if self.show_timer2.get():
+                self.timer2_label.grid()
+            else:
+                self.timer2_label.grid_remove()
 
             if self.show_reset_table.get():
                 self.reset_table_button.grid()
@@ -473,17 +502,30 @@ class SchulteTableApp:
             self.log_event("error", "update_control_visibility", f"Ошибка при обновлении видимости: {str(e)}")
 
     def update_timer(self):
-        """Обновляет отображение таймера"""
+        """Обновляет отображение таймера 1"""
         if self.is_closing or not self.timer_running:
             return
         try:
             elapsed_time = time.time() - self.session_start_time
-            minutes = int(elapsed_time // 60)
-            seconds = int(elapsed_time % 60)
-            self.timer_label.config(text=f"{minutes:02d}:{seconds:02d}")
-            self.timer_after_id = self.root.after(100, self.update_timer)
+            seconds = int(elapsed_time)
+            milliseconds = int((elapsed_time - seconds) * 1000)
+            self.timer_label.config(text=f"{seconds}.{milliseconds:03d}")
+            self.timer_after_id = self.root.after(10, self.update_timer)
         except Exception as e:
             self.log_event("error", "update_timer", f"Ошибка при обновлении таймера: {str(e)}")
+
+    def update_timer2(self):
+        """Обновляет отображение таймера 2"""
+        if self.is_closing or not self.timer_running:
+            return
+        try:
+            elapsed_time = time.time() - self.session_start_time
+            seconds = int(elapsed_time)
+            milliseconds = int((elapsed_time - seconds) * 1000)
+            self.timer2_label.config(text=f"{seconds}.{milliseconds:03d}")
+            self.timer2_after_id = self.root.after(10, self.update_timer2)
+        except Exception as e:
+            self.log_event("error", "update_timer2", f"Ошибка при обновлении таймера 2: {str(e)}")
 
     def update_table_size(self, event=None):
         """Обновляет размеры таблицы при изменении размера окна"""
@@ -508,20 +550,30 @@ class SchulteTableApp:
             self.cell_color = self.cell_color_label.cget("background")
             self.active_cell_color = self.active_color_label.cget("background")
             self.target_color = self.target_color_label.cget("background")
+            self.timer_color = self.timer_color_label.cget("background")
+            self.timer_bg_color = self.timer_bg_color_label.cget("background")
+            self.timer2_color = self.timer2_color_label.cget("background")
+            self.timer2_bg_color = self.timer2_bg_color_label.cget("background")
             self.bg_color = self.bg_color_label.cget("background")
 
             self.font_family = self.font_family_var.get()
             self.font_size = self.font_size_var.get()
             self.target_font_family = self.target_font_family_var.get()
             self.target_font_size = self.target_font_size_var.get()
+            self.timer_font_family = self.timer_font_family_var.get()
+            self.timer_font_size = self.timer_font_size_var.get()
+            self.timer2_font_family = self.timer2_font_family_var.get()
+            self.timer2_font_size = self.timer2_font_size_var.get()
 
             self.cell_min_width = self.cell_min_width_var.get()
             self.cell_min_height = self.cell_min_height_var.get()
 
             self.clicks_counter.config(font=(self.target_font_family, self.target_font_size),
                                        foreground=self.target_color)
-            self.timer_label.config(font=(self.target_font_family, self.target_font_size),
-                                    foreground=self.target_color)
+            self.timer_label.config(font=(self.timer_font_family, self.timer_font_size),
+                                    foreground=self.timer_color, background=self.timer_bg_color)
+            self.timer2_label.config(font=(self.timer2_font_family, self.timer2_font_size),
+                                     foreground=self.timer2_color, background=self.timer2_bg_color)
             self.apply_bg_color()
 
             if self.timer_running and not self.generating_table:
@@ -558,7 +610,22 @@ class SchulteTableApp:
                     self.target_color = color
                     self.target_color_label.config(background=color)
                     self.clicks_counter.config(foreground=color)
+                elif color_type == "timer":
+                    self.timer_color = color
+                    self.timer_color_label.config(background=color)
                     self.timer_label.config(foreground=color)
+                elif color_type == "timer_bg":
+                    self.timer_bg_color = color
+                    self.timer_bg_color_label.config(background=color)
+                    self.timer_label.config(background=color)
+                elif color_type == "timer2":
+                    self.timer2_color = color
+                    self.timer2_color_label.config(background=color)
+                    self.timer2_label.config(foreground=color)
+                elif color_type == "timer2_bg":
+                    self.timer2_bg_color = color
+                    self.timer2_bg_color_label.config(background=color)
+                    self.timer2_label.config(background=color)
                 elif color_type == "bg":
                     self.bg_color = color
                     self.bg_color_label.config(background=color)
@@ -577,29 +644,11 @@ class SchulteTableApp:
             return
         try:
             self.log_event("action", "toggle_game_modes", "Переключение режимов игры")
-            self.click_refresh_mode = self.click_refresh_mode_var.get()
-            self.click_no_refresh_mode = self.click_no_refresh_mode_var.get()
-            self.hover_mode = self.hover_mode_var.get()
-            self.simple_mode = self.simple_mode_var.get()
-
-            modes = [self.click_refresh_mode, self.click_no_refresh_mode, self.hover_mode, self.simple_mode]
-            if sum(modes) > 1:
-                if self.click_refresh_mode:
-                    self.click_no_refresh_mode_var.set(False)
-                    self.hover_mode_var.set(False)
-                    self.simple_mode_var.set(False)
-                elif self.click_no_refresh_mode:
-                    self.click_refresh_mode_var.set(False)
-                    self.hover_mode_var.set(False)
-                    self.simple_mode_var.set(False)
-                elif self.hover_mode:
-                    self.click_refresh_mode_var.set(False)
-                    self.click_no_refresh_mode_var.set(False)
-                    self.simple_mode_var.set(False)
-                elif self.simple_mode:
-                    self.click_refresh_mode_var.set(False)
-                    self.click_no_refresh_mode_var.set(False)
-                    self.hover_mode_var.set(False)
+            mode = self.game_mode_var.get()
+            self.click_refresh_mode = mode == "click_refresh"
+            self.click_no_refresh_mode = mode == "click_no_refresh"
+            self.hover_mode = mode == "hover"
+            self.simple_mode = mode == "simple"
         except Exception as e:
             self.log_event("error", "toggle_game_modes", f"Ошибка при переключении режимов игры: {str(e)}")
 
@@ -663,6 +712,10 @@ class SchulteTableApp:
             self.font_size = self.font_size_var.get()
             self.target_font_family = self.target_font_family_var.get()
             self.target_font_size = self.target_font_size_var.get()
+            self.timer_font_family = self.timer_font_family_var.get()
+            self.timer_font_size = self.timer_font_size_var.get()
+            self.timer2_font_family = self.timer2_font_family_var.get()
+            self.timer2_font_size = self.timer2_font_size_var.get()
             self.cell_min_width = self.cell_min_width_var.get()
             self.cell_min_height = self.cell_min_height_var.get()
 
@@ -675,15 +728,21 @@ class SchulteTableApp:
             self.clicks_counter.config(text=str(self.current_number),
                                        font=(self.target_font_family, self.target_font_size),
                                        foreground=self.target_color)
-            self.timer_label.config(text="00:00",
-                                    font=(self.target_font_family, self.target_font_size),
-                                    foreground=self.target_color)
+            self.timer_label.config(text="0.000",
+                                    font=(self.timer_font_family, self.timer_font_size),
+                                    foreground=self.timer_color, background=self.timer_bg_color)
+            self.timer2_label.config(text="0.000",
+                                     font=(self.timer2_font_family, self.timer2_font_size),
+                                     foreground=self.timer2_color, background=self.timer2_bg_color)
             self.start_stop_button.config(text="Стоп (Пробел)")
 
-            # Запускаем таймер
+            # Запускаем таймеры
             if self.timer_after_id:
                 self.root.after_cancel(self.timer_after_id)
-            self.timer_after_id = self.root.after(100, self.update_timer)
+            self.timer_after_id = self.root.after(10, self.update_timer)
+            if self.timer2_after_id:
+                self.root.after_cancel(self.timer2_after_id)
+            self.timer2_after_id = self.root.after(10, self.update_timer2)
 
             if self.after_id:
                 self.root.after_cancel(self.after_id)
@@ -757,9 +816,9 @@ class SchulteTableApp:
                 canvas_height = self.root.winfo_height() - 200
                 self.log_event("action", "generate_table", "Используется высота окна по умолчанию")
 
-            # Вычисляем размеры ячеек
-            cell_width = max(self.cell_min_width, canvas_width // self.cols)
-            cell_height = max(self.cell_min_height, canvas_height // self.rows)
+            # Вычисляем размеры ячеек, чтобы вписаться в пространство
+            cell_width = min(self.cell_min_width, canvas_width // self.cols)
+            cell_height = min(self.cell_min_height, canvas_height // self.rows)
 
             for i in range(self.rows):
                 self.scrollable_frame.rowconfigure(i, weight=1, minsize=cell_height)
@@ -781,8 +840,8 @@ class SchulteTableApp:
                     self.buttons.append(btn)
 
             # Проверяем необходимость скроллбаров
-            total_width = self.cols * self.cell_min_width
-            total_height = self.rows * self.cell_min_height
+            total_width = self.cols * cell_width
+            total_height = self.rows * cell_height
 
             if total_width > canvas_width:
                 self.h_scrollbar.pack(side="bottom", fill="x")
@@ -908,7 +967,9 @@ class SchulteTableApp:
             if self.timer_after_id:
                 self.root.after_cancel(self.timer_after_id)
                 self.timer_after_id = None
-                self.timer_label.config(text="00:00")
+            if self.timer2_after_id:
+                self.root.after_cancel(self.timer2_after_id)
+                self.timer2_after_id = None
 
             if save_stats and self.session_start_time:
                 session_time = time.time() - self.session_start_time
@@ -917,11 +978,7 @@ class SchulteTableApp:
                 else:
                     avg_time = sum(self.session_data) / len(self.session_data) if self.session_data else 0
 
-                mode = "simple" if self.simple_mode else (
-                    "hover" if self.hover_mode else (
-                        "click_no_refresh" if self.click_no_refresh_mode else "click_refresh"
-                    )
-                )
+                mode = self.game_mode_var.get()
                 self.stats[self.current_user].append({
                     "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "rows": self.rows,

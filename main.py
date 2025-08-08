@@ -15,11 +15,11 @@ class SchulteTableApp:
         self.root.geometry("1000x800")
 
         # Настройки по умолчанию
-        self.rows = 4
-        self.cols = 4
-        self.cell_min_width = 20
-        self.cell_min_height = 20
-        self.logging_enabled = True
+        self.rows = 5
+        self.cols = 5
+        self.cell_min_width = 50
+        self.cell_min_height = 50
+        self.logging_enabled = False
 
         # Цвета
         self.bg_color = "#f0f0f0"
@@ -50,8 +50,9 @@ class SchulteTableApp:
         self.correct_hovers = 0
         self.correct_clicks = 0
         self.after_id = None
+        self.timer_after_id = None  # Для таймера
         self.generating_table = False
-        self.is_closing = False  # Флаг для предотвращения операций при закрытии
+        self.is_closing = False
 
         # Переменные для режимов игры
         self.click_refresh_mode_var = tk.BooleanVar(value=True)
@@ -69,6 +70,7 @@ class SchulteTableApp:
         self.show_hover_mode = tk.BooleanVar(value=True)
         self.show_simple_mode = tk.BooleanVar(value=True)
         self.show_target = tk.BooleanVar(value=True)
+        self.show_timer = tk.BooleanVar(value=True)  # Для таймера
         self.show_reset_table = tk.BooleanVar(value=True)
         self.show_start_stop = tk.BooleanVar(value=True)
 
@@ -91,6 +93,9 @@ class SchulteTableApp:
             if self.after_id:
                 self.root.after_cancel(self.after_id)
                 self.after_id = None
+            if self.timer_after_id:
+                self.root.after_cancel(self.timer_after_id)
+                self.timer_after_id = None
             self.root.unbind("<Configure>")
             self.root.destroy()
         except Exception as e:
@@ -116,7 +121,7 @@ class SchulteTableApp:
                         logs = json.load(f)
                 except json.JSONDecodeError as e:
                     print(f"Ошибка чтения JSON: {str(e)}")
-                    logs = []  # Создаем новый список, если файл поврежден
+                    logs = []
             logs.append(log_entry)
             with open(log_file, "w", encoding="utf-8") as f:
                 json.dump(logs, f, indent=2, ensure_ascii=False)
@@ -195,7 +200,11 @@ class SchulteTableApp:
                                                     command=self.toggle_game_modes)
             self.simple_mode_check.grid(row=3, column=1, padx=5, pady=5, sticky="w")
 
-            # Третий столбец: Ищем
+            # Третий столбец: Таймер и Ищем
+            self.timer_label = ttk.Label(self.control_frame, text="00:00",
+                                         font=(self.target_font_family, self.target_font_size),
+                                         foreground=self.target_color)
+            self.timer_label.grid(row=1, column=2, padx=5, pady=5, sticky="w")
             self.target_label = ttk.Label(self.control_frame, text="Ищем:")
             self.target_label.grid(row=2, column=2, padx=5, pady=5, sticky="w")
             self.clicks_counter = ttk.Label(self.control_frame, text="0",
@@ -378,10 +387,12 @@ class SchulteTableApp:
                             command=self.update_control_visibility).grid(row=7, column=0, padx=5, pady=5, sticky="w")
             ttk.Checkbutton(controls_frame, text="Показать счетчик 'Ищем'", variable=self.show_target,
                             command=self.update_control_visibility).grid(row=8, column=0, padx=5, pady=5, sticky="w")
-            ttk.Checkbutton(controls_frame, text="Показать кнопку 'Обновить таблицу'", variable=self.show_reset_table,
+            ttk.Checkbutton(controls_frame, text="Показать таймер", variable=self.show_timer,
                             command=self.update_control_visibility).grid(row=9, column=0, padx=5, pady=5, sticky="w")
-            ttk.Checkbutton(controls_frame, text="Показать кнопку 'Старт/Стоп'", variable=self.show_start_stop,
+            ttk.Checkbutton(controls_frame, text="Показать кнопку 'Обновить таблицу'", variable=self.show_reset_table,
                             command=self.update_control_visibility).grid(row=10, column=0, padx=5, pady=5, sticky="w")
+            ttk.Checkbutton(controls_frame, text="Показать кнопку 'Старт/Стоп'", variable=self.show_start_stop,
+                            command=self.update_control_visibility).grid(row=11, column=0, padx=5, pady=5, sticky="w")
         except Exception as e:
             self.log_event("error", "create_controls_tab", f"Ошибка при создании вкладки управления: {str(e)}")
 
@@ -444,6 +455,11 @@ class SchulteTableApp:
                 self.target_label.grid_remove()
                 self.clicks_counter.grid_remove()
 
+            if self.show_timer.get():
+                self.timer_label.grid()
+            else:
+                self.timer_label.grid_remove()
+
             if self.show_reset_table.get():
                 self.reset_table_button.grid()
             else:
@@ -455,6 +471,19 @@ class SchulteTableApp:
                 self.start_stop_button.grid_remove()
         except Exception as e:
             self.log_event("error", "update_control_visibility", f"Ошибка при обновлении видимости: {str(e)}")
+
+    def update_timer(self):
+        """Обновляет отображение таймера"""
+        if self.is_closing or not self.timer_running:
+            return
+        try:
+            elapsed_time = time.time() - self.session_start_time
+            minutes = int(elapsed_time // 60)
+            seconds = int(elapsed_time % 60)
+            self.timer_label.config(text=f"{minutes:02d}:{seconds:02d}")
+            self.timer_after_id = self.root.after(100, self.update_timer)
+        except Exception as e:
+            self.log_event("error", "update_timer", f"Ошибка при обновлении таймера: {str(e)}")
 
     def update_table_size(self, event=None):
         """Обновляет размеры таблицы при изменении размера окна"""
@@ -491,6 +520,8 @@ class SchulteTableApp:
 
             self.clicks_counter.config(font=(self.target_font_family, self.target_font_size),
                                        foreground=self.target_color)
+            self.timer_label.config(font=(self.target_font_family, self.target_font_size),
+                                    foreground=self.target_color)
             self.apply_bg_color()
 
             if self.timer_running and not self.generating_table:
@@ -527,6 +558,7 @@ class SchulteTableApp:
                     self.target_color = color
                     self.target_color_label.config(background=color)
                     self.clicks_counter.config(foreground=color)
+                    self.timer_label.config(foreground=color)
                 elif color_type == "bg":
                     self.bg_color = color
                     self.bg_color_label.config(background=color)
@@ -643,7 +675,15 @@ class SchulteTableApp:
             self.clicks_counter.config(text=str(self.current_number),
                                        font=(self.target_font_family, self.target_font_size),
                                        foreground=self.target_color)
+            self.timer_label.config(text="00:00",
+                                    font=(self.target_font_family, self.target_font_size),
+                                    foreground=self.target_color)
             self.start_stop_button.config(text="Стоп (Пробел)")
+
+            # Запускаем таймер
+            if self.timer_after_id:
+                self.root.after_cancel(self.timer_after_id)
+            self.timer_after_id = self.root.after(100, self.update_timer)
 
             if self.after_id:
                 self.root.after_cancel(self.after_id)
@@ -865,6 +905,10 @@ class SchulteTableApp:
             if self.after_id:
                 self.root.after_cancel(self.after_id)
                 self.after_id = None
+            if self.timer_after_id:
+                self.root.after_cancel(self.timer_after_id)
+                self.timer_after_id = None
+                self.timer_label.config(text="00:00")
 
             if save_stats and self.session_start_time:
                 session_time = time.time() - self.session_start_time
@@ -1021,7 +1065,7 @@ if __name__ == "__main__":
         style.theme_use('clam')
 
         app = SchulteTableApp(root)
-        app.logging_enabled = True  # Включаем логирование
+        app.logging_enabled = True
         root.mainloop()
     except Exception as e:
         print(f"Произошла ошибка: {str(e)}")
